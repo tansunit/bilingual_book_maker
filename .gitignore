@@ -83,6 +83,7 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+environment_snapshot.txt
 
 # pyenv
 .python-version
