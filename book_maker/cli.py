@@ -135,29 +135,10 @@ def main():
         " to split them to go beyond the rate limits",
     )
     parser.add_argument(
-        "--caiyun_key",
-        dest="caiyun_key",
-        type=str,
-        help="you can apply caiyun key from here (https://dashboard.caiyunapp.com/user/sign_in/)",
-    )
-    parser.add_argument(
-        "--deepl_key",
-        dest="deepl_key",
-        type=str,
-        help="you can apply deepl key from here (https://rapidapi.com/splintPRO/api/dpl-translator",
-    )
-    parser.add_argument(
         "--claude_key",
         dest="claude_key",
         type=str,
         help="you can find claude key from here (https://console.anthropic.com/account/keys)",
-    )
-
-    parser.add_argument(
-        "--custom_api",
-        dest="custom_api",
-        type=str,
-        help="you should build your own translation api",
     )
 
     # for Google Gemini
@@ -166,30 +147,6 @@ def main():
         dest="gemini_key",
         type=str,
         help="You can get Gemini Key from  https://makersuite.google.com/app/apikey",
-    )
-
-    # for Groq
-    parser.add_argument(
-        "--groq_key",
-        dest="groq_key",
-        type=str,
-        help="You can get Groq Key from  https://console.groq.com/keys",
-    )
-
-    # for xAI
-    parser.add_argument(
-        "--xai_key",
-        dest="xai_key",
-        type=str,
-        help="You can get xAI Key from  https://console.x.ai/",
-    )
-
-    # for Qwen
-    parser.add_argument(
-        "--qwen_key",
-        dest="qwen_key",
-        type=str,
-        help="You can get Qwen Key from  https://bailian.console.aliyun.com/?tab=model#/api-key",
     )
 
     parser.add_argument(
@@ -366,7 +323,7 @@ So you are close to reaching the limit. You have to choose your own value, there
         "--source_lang",
         type=str,
         default="auto",
-        help="source language for translation models like `qwen` (default: auto-detect)",
+        help="source language for translation models (default: auto-detect)",
     )
     parser.add_argument(
         "--block_size",
@@ -453,30 +410,12 @@ So you are close to reaching the limit. You have to choose your own value, there
             raise Exception(
                 "OpenAI API key not provided, please google how to obtain it",
             )
-    elif options.model == "caiyun":
-        API_KEY = options.caiyun_key or env.get("BBM_CAIYUN_API_KEY")
-        if not API_KEY:
-            raise Exception("Please provide caiyun key")
-    elif options.model == "deepl":
-        API_KEY = options.deepl_key or env.get("BBM_DEEPL_API_KEY")
-        if not API_KEY:
-            raise Exception("Please provide deepl key")
     elif options.model.startswith("claude"):
         API_KEY = options.claude_key or env.get("BBM_CLAUDE_API_KEY")
         if not API_KEY:
             raise Exception("Please provide claude key")
-    elif options.model == "customapi":
-        API_KEY = options.custom_api or env.get("BBM_CUSTOM_API")
-        if not API_KEY:
-            raise Exception("Please provide custom translate api")
     elif options.model in ["gemini", "geminipro"]:
         API_KEY = options.gemini_key or env.get("BBM_GOOGLE_GEMINI_KEY")
-    elif options.model == "groq":
-        API_KEY = options.groq_key or env.get("BBM_GROQ_API_KEY")
-    elif options.model == "xai":
-        API_KEY = options.xai_key or env.get("BBM_XAI_API_KEY")
-    elif options.model.startswith("qwen-"):
-        API_KEY = options.qwen_key or env.get("BBM_QWEN_API_KEY")
     else:
         API_KEY = ""
 
@@ -569,7 +508,7 @@ So you are close to reaching the limit. You have to choose your own value, there
         if not options.api_base:
             raise ValueError("`api_base` must be provided when using `deployment_id`")
         e.translate_model.set_deployment_id(options.deployment_id)
-    if options.model in ("openai", "groq"):
+    if options.model == "openai":
         # Currently only supports `openai` when you also have --model_list set
         if options.model_list:
             e.translate_model.set_model_list(options.model_list.split(","))
@@ -601,8 +540,6 @@ So you are close to reaching the limit. You have to choose your own value, there
         e.translate_model.set_o3mini_models()
     if options.model.startswith("claude-"):
         e.translate_model.set_claude_model(options.model)
-    if options.model.startswith("qwen-"):
-        e.translate_model.set_qwen_model(options.model)
     if options.block_size > 0:
         e.block_size = options.block_size
     if options.batch_flag:
