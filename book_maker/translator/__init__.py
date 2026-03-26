@@ -3,16 +3,7 @@ from book_maker.translator.claude_translator import Claude
 from book_maker.translator.gemini_translator import Gemini
 
 MODEL_DICT = {
-    "openai": ChatGPTAPI,
     "chatgptapi": ChatGPTAPI,
-    "gpt4": ChatGPTAPI,
-    "gpt4omini": ChatGPTAPI,
-    "gpt4o": ChatGPTAPI,
-    "gpt5mini": ChatGPTAPI,
-    "o1preview": ChatGPTAPI,
-    "o1": ChatGPTAPI,
-    "o1mini": ChatGPTAPI,
-    "o3mini": ChatGPTAPI,
     "claude": Claude,
     "claude-sonnet-4-6": Claude,
     "claude-opus-4-6": Claude,

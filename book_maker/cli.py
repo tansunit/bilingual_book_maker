@@ -162,7 +162,7 @@ def main():
         "--model_list",
         type=str,
         dest="model_list",
-        help="specify the exact model name to use, e.g. claude-sonnet-4-6, gpt-4o, gemini-1.5-pro",
+        help="specify the exact model name to use, e.g. claude-sonnet-4-6, gpt-5.4, gemini-3-flash",
     )
     parser.add_argument(
         "--language",
@@ -273,7 +273,7 @@ So you are close to reaching the limit. You have to choose your own value, there
         "--temperature",
         type=float,
         default=1.0,
-        help="temperature parameter for `chatgptapi`/`gpt4`/`gpt4omini`/`gpt4o`/`gpt5mini`/`claude`/`gemini`",
+        help="temperature parameter for `chatgptapi`/`claude`/`gemini`",
     )
     parser.add_argument(
         "--block_size",
@@ -300,18 +300,7 @@ So you are close to reaching the limit. You have to choose your own value, there
     translate_model = MODEL_DICT.get(options.model)
     assert translate_model is not None, "unsupported model"
     API_KEY = ""
-    if options.model in [
-        "openai",
-        "chatgptapi",
-        "gpt4",
-        "gpt4omini",
-        "gpt4o",
-        "gpt5mini",
-        "o1preview",
-        "o1",
-        "o1mini",
-        "o3mini",
-    ]:
+    if options.model == "chatgptapi":
         if OPENAI_API_KEY := (
             options.openai_key
             or env.get(
@@ -392,48 +381,19 @@ So you are close to reaching the limit. You have to choose your own value, there
     if options.batch_use_flag:
         e.batch_use_flag = options.batch_use_flag
 
-    # --model_list: override the specific model name for any provider
+    # Set model via --model_list (required for chatgptapi and gemini)
     if options.model_list:
         model_names = options.model_list.split(",")
         if options.model.startswith("claude"):
-            # Claude: use the first model name from the list
             e.translate_model.set_claude_model(model_names[0])
         elif options.model in ("gemini", "geminipro"):
+            e.translate_model.set_interval(0.01)
             e.translate_model.set_model_list(model_names)
-        elif options.model in [
-            "openai",
-            "chatgptapi",
-            "gpt4",
-            "gpt4omini",
-            "gpt4o",
-            "gpt5mini",
-            "o1preview",
-            "o1",
-            "o1mini",
-            "o3mini",
-        ]:
+        elif options.model == "chatgptapi":
             e.translate_model.set_model_list(model_names)
     else:
-        # No --model_list provided: use default model sets
-        if options.model == "chatgptapi":
-            e.translate_model.set_gpt35_models()
-        elif options.model == "gpt4":
-            e.translate_model.set_gpt4_models()
-        elif options.model == "gpt4omini":
-            e.translate_model.set_gpt4omini_models()
-        elif options.model == "gpt4o":
-            e.translate_model.set_gpt4o_models()
-        elif options.model == "gpt5mini":
-            e.translate_model.set_gpt5mini_models()
-        elif options.model == "o1preview":
-            e.translate_model.set_o1preview_models()
-        elif options.model == "o1":
-            e.translate_model.set_o1_models()
-        elif options.model == "o1mini":
-            e.translate_model.set_o1mini_models()
-        elif options.model == "o3mini":
-            e.translate_model.set_o3mini_models()
-        elif options.model in ("gemini", "geminipro"):
+        # No --model_list: use default model sets as fallback
+        if options.model in ("gemini", "geminipro"):
             e.translate_model.set_interval(0.01)
             if options.model == "gemini":
                 e.translate_model.set_geminiflash_models()
