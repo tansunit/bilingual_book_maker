@@ -111,20 +111,6 @@ def main():
         type=str,
         help="path of the epub file to be translated",
     )
-    parser.add_argument(
-        "--book_from",
-        dest="book_from",
-        type=str,
-        choices=["kobo"],  # support kindle later
-        metavar="E-READER",
-        help="e-reader type, available: {%(choices)s}",
-    )
-    parser.add_argument(
-        "--device_path",
-        dest="device_path",
-        type=str,
-        help="Path of e-reader device",
-    )
     ########## KEYS ##########
     parser.add_argument(
         "--openai_key",
@@ -168,17 +154,15 @@ def main():
         dest="model",
         type=str,
         default="chatgptapi",
-        choices=translate_model_list,  # support DeepL later
+        choices=translate_model_list,
         metavar="MODEL",
         help="model to use, available: {%(choices)s}",
     )
     parser.add_argument(
-        "--ollama_model",
-        dest="ollama_model",
+        "--model_list",
         type=str,
-        default="",
-        metavar="MODEL",
-        help="use ollama",
+        dest="model_list",
+        help="specify the exact model name to use, e.g. claude-sonnet-4-6, gpt-4o, gemini-1.5-pro",
     )
     parser.add_argument(
         "--language",
@@ -194,20 +178,6 @@ def main():
         dest="resume",
         action="store_true",
         help="if program stop unexpected you can use this to resume",
-    )
-    parser.add_argument(
-        "-p",
-        "--proxy",
-        dest="proxy",
-        type=str,
-        default="",
-        help="use proxy like http://127.0.0.1:7890",
-    )
-    parser.add_argument(
-        "--deployment_id",
-        dest="deployment_id",
-        type=str,
-        help="the deployment name you chose when you deployed the model",
     )
     # args to change api_base
     parser.add_argument(
@@ -225,13 +195,6 @@ def main():
         help="if you have more than one file to exclude, please use comma to split them, example: --exclude_filelist 'nav.xhtml,cover.xhtml'",
     )
     parser.add_argument(
-        "--only_filelist",
-        dest="only_filelist",
-        type=str,
-        default="",
-        help="if you only have a few files with translations, please use comma to split them, example: --only_filelist 'nav.xhtml,cover.xhtml'",
-    )
-    parser.add_argument(
         "--translate-tags",
         dest="translate_tags",
         type=str,
@@ -244,13 +207,6 @@ def main():
         type=str,
         default="sup",
         help="example --exclude_translate-tags table,sup",
-    )
-    parser.add_argument(
-        "--allow_navigable_strings",
-        dest="allow_navigable_strings",
-        action="store_true",
-        default=False,
-        help="allow NavigableStrings to be translated",
     )
     parser.add_argument(
         "--prompt",
@@ -320,47 +276,16 @@ So you are close to reaching the limit. You have to choose your own value, there
         help="temperature parameter for `chatgptapi`/`gpt4`/`gpt4omini`/`gpt4o`/`gpt5mini`/`claude`/`gemini`",
     )
     parser.add_argument(
-        "--source_lang",
-        type=str,
-        default="auto",
-        help="source language for translation models (default: auto-detect)",
-    )
-    parser.add_argument(
         "--block_size",
         type=int,
         default=-1,
         help="merge multiple paragraphs into one block, may increase accuracy and speed up the process, but disturb the original format, must be used with `--single_translate`",
     )
     parser.add_argument(
-        "--model_list",
-        type=str,
-        dest="model_list",
-        help="Rather than using our preset lists of models, specify exactly the models you want as a comma separated list `gpt-4-32k,gpt-3.5-turbo-0125` (Currently only supports: `openai`)",
-    )
-    parser.add_argument(
-        "--batch",
-        dest="batch_flag",
-        action="store_true",
-        help="Enable batch translation using ChatGPT's batch API for improved efficiency",
-    )
-    parser.add_argument(
         "--batch-use",
         dest="batch_use_flag",
         action="store_true",
         help="Use pre-generated batch translations to create files. Run with --batch first before using this option",
-    )
-    parser.add_argument(
-        "--interval",
-        type=float,
-        default=0.01,
-        help="Request interval in seconds (e.g., 0.1 for 100ms). Currently only supported for Gemini models. Default: 0.01",
-    )
-    parser.add_argument(
-        "--parallel-workers",
-        dest="parallel_workers",
-        type=int,
-        default=1,
-        help="Number of parallel workers for EPUB chapter processing. Use 2-4 for better performance. Default: 1",
     )
 
     options = parser.parse_args()
@@ -371,11 +296,6 @@ So you are close to reaching the limit. You have to choose your own value, there
     if not os.path.isfile(options.book_name):
         print(f"Error: the book {options.book_name!r} does not exist.")
         exit(1)
-
-    PROXY = options.proxy
-    if PROXY != "":
-        os.environ["http_proxy"] = PROXY
-        os.environ["https_proxy"] = PROXY
 
     translate_model = MODEL_DICT.get(options.model)
     assert translate_model is not None, "unsupported model"
@@ -402,10 +322,6 @@ So you are close to reaching the limit. You have to choose your own value, there
             )  # suggest adding `BBM_` prefix for all the bilingual_book_maker ENVs.
         ):
             API_KEY = OPENAI_API_KEY
-            # patch
-        elif options.ollama_model:
-            # any string is ok, can't be empty
-            API_KEY = "ollama"
         else:
             raise Exception(
                 "OpenAI API key not provided, please google how to obtain it",
@@ -418,16 +334,6 @@ So you are close to reaching the limit. You have to choose your own value, there
         API_KEY = options.gemini_key or env.get("BBM_GOOGLE_GEMINI_KEY")
     else:
         API_KEY = ""
-
-    if options.book_from == "kobo":
-        from book_maker import obok
-
-        device_path = options.device_path
-        if device_path is None:
-            raise Exception(
-                "Device path is not given, please specify the path by --device_path <DEVICE_PATH>",
-            )
-        options.book_name = obok.cli_main(device_path)
 
     book_type = options.book_name.split(".")[-1]
     support_type_list = list(BOOK_LOADER_DICT.keys())
@@ -451,10 +357,6 @@ So you are close to reaching the limit. You have to choose your own value, there
     # change api_base for issue #42
     model_api_base = options.api_base
 
-    if options.ollama_model and not model_api_base:
-        # ollama default api_base
-        model_api_base = "http://localhost:11434/v1"
-
     e = book_loader(
         options.book_name,
         translate_model,
@@ -469,20 +371,14 @@ So you are close to reaching the limit. You have to choose your own value, there
         context_flag=options.context_flag,
         context_paragraph_limit=options.context_paragraph_limit,
         temperature=options.temperature,
-        source_lang=options.source_lang,
-        parallel_workers=options.parallel_workers,
     )
     # other options
-    if options.allow_navigable_strings:
-        e.allow_navigable_strings = True
     if options.translate_tags:
         e.translate_tags = options.translate_tags
     if options.exclude_translate_tags:
         e.exclude_translate_tags = options.exclude_translate_tags
     if options.exclude_filelist:
         e.exclude_filelist = options.exclude_filelist
-    if options.only_filelist:
-        e.only_filelist = options.only_filelist
     if options.accumulated_num > 1:
         e.accumulated_num = options.accumulated_num
     if options.translation_style:
@@ -491,71 +387,58 @@ So you are close to reaching the limit. You have to choose your own value, there
         e.batch_size = options.batch_size
     if options.retranslate:
         e.retranslate = options.retranslate
-    if options.deployment_id:
-        # only work for ChatGPT api for now
-        # later maybe support others
-        assert options.model in [
+    if options.block_size > 0:
+        e.block_size = options.block_size
+    if options.batch_use_flag:
+        e.batch_use_flag = options.batch_use_flag
+
+    # --model_list: override the specific model name for any provider
+    if options.model_list:
+        model_names = options.model_list.split(",")
+        if options.model.startswith("claude"):
+            # Claude: use the first model name from the list
+            e.translate_model.set_claude_model(model_names[0])
+        elif options.model in ("gemini", "geminipro"):
+            e.translate_model.set_model_list(model_names)
+        elif options.model in [
+            "openai",
             "chatgptapi",
             "gpt4",
             "gpt4omini",
             "gpt4o",
             "gpt5mini",
-            "o1",
             "o1preview",
+            "o1",
             "o1mini",
             "o3mini",
-        ], "only support chatgptapi for deployment_id"
-        if not options.api_base:
-            raise ValueError("`api_base` must be provided when using `deployment_id`")
-        e.translate_model.set_deployment_id(options.deployment_id)
-    if options.model == "openai":
-        # Currently only supports `openai` when you also have --model_list set
-        if options.model_list:
-            e.translate_model.set_model_list(options.model_list.split(","))
-        else:
-            raise ValueError(
-                "When using `openai` model, you must also provide `--model_list`. For default model sets use `--model chatgptapi` or `--model gpt4` or `--model gpt4omini` or `--model gpt5mini`",
-            )
-    # TODO refactor, quick fix for gpt4 model
-    if options.model == "chatgptapi":
-        if options.ollama_model:
-            e.translate_model.set_gpt35_models(ollama_model=options.ollama_model)
-        else:
+        ]:
+            e.translate_model.set_model_list(model_names)
+    else:
+        # No --model_list provided: use default model sets
+        if options.model == "chatgptapi":
             e.translate_model.set_gpt35_models()
-    if options.model == "gpt4":
-        e.translate_model.set_gpt4_models()
-    if options.model == "gpt4omini":
-        e.translate_model.set_gpt4omini_models()
-    if options.model == "gpt4o":
-        e.translate_model.set_gpt4o_models()
-    if options.model == "gpt5mini":
-        e.translate_model.set_gpt5mini_models()
-    if options.model == "o1preview":
-        e.translate_model.set_o1preview_models()
-    if options.model == "o1":
-        e.translate_model.set_o1_models()
-    if options.model == "o1mini":
-        e.translate_model.set_o1mini_models()
-    if options.model == "o3mini":
-        e.translate_model.set_o3mini_models()
-    if options.model.startswith("claude-"):
-        e.translate_model.set_claude_model(options.model)
-    if options.block_size > 0:
-        e.block_size = options.block_size
-    if options.batch_flag:
-        e.batch_flag = options.batch_flag
-    if options.batch_use_flag:
-        e.batch_use_flag = options.batch_use_flag
-
-    if options.model in ("gemini", "geminipro"):
-        e.translate_model.set_interval(options.interval)
-    if options.model == "gemini":
-        if options.model_list:
-            e.translate_model.set_model_list(options.model_list.split(","))
-        else:
-            e.translate_model.set_geminiflash_models()
-    if options.model == "geminipro":
-        e.translate_model.set_geminipro_models()
+        elif options.model == "gpt4":
+            e.translate_model.set_gpt4_models()
+        elif options.model == "gpt4omini":
+            e.translate_model.set_gpt4omini_models()
+        elif options.model == "gpt4o":
+            e.translate_model.set_gpt4o_models()
+        elif options.model == "gpt5mini":
+            e.translate_model.set_gpt5mini_models()
+        elif options.model == "o1preview":
+            e.translate_model.set_o1preview_models()
+        elif options.model == "o1":
+            e.translate_model.set_o1_models()
+        elif options.model == "o1mini":
+            e.translate_model.set_o1mini_models()
+        elif options.model == "o3mini":
+            e.translate_model.set_o3mini_models()
+        elif options.model in ("gemini", "geminipro"):
+            e.translate_model.set_interval(0.01)
+            if options.model == "gemini":
+                e.translate_model.set_geminiflash_models()
+            else:
+                e.translate_model.set_geminipro_models()
 
     e.make_bilingual_book()
 
